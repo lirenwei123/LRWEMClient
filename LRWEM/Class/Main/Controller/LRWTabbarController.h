@@ -11,4 +11,5 @@
 @interface LRWTabbarController : UITabBarController
 +(instancetype)TabbarController;
 -(instancetype)init;
+@property (strong,nonatomic)NSMutableArray *newMessages;
 @end

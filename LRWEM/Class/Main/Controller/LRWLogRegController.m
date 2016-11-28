@@ -37,13 +37,12 @@
 }
 
 -(void)awakeFromNib{
-    self.userName.delegate=self;
-    self.pwd.delegate=self;
-   
-
 }
 - (void)viewDidLoad {
     [super viewDidLoad];
+    self.userName.delegate=self;
+    self.pwd.delegate=self;
+
     if (self.lrwusername) {
         self.userName.text=self.lrwusername;
     }
@@ -52,65 +51,79 @@
 
 #pragma mark --login
 -(void)loginFunctionWith:(NSString *)username pwd:(NSString*)pwd{
+    if (username.length*pwd.length==0) {
+        return;
+    }
     [SVProgressHUD showWithStatus:@"正在登录"];
+//    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+//        <#code#>
+//    })
     [[EMClient sharedClient]asyncLoginWithUsername:username password:pwd
                                            success:^{
-        NSLog(@"登录成功");
+          [JDStatusBarNotification showWithStatus:@"登录成功" dismissAfter:2 styleName:JDStatusBarStyleSuccess];
+                                               NSLog(@"登录成功");
         [SVProgressHUD dismiss];
+      
         //进行跳转内容控制器
         [UIApplication sharedApplication].keyWindow.rootViewController =[LRWTabbarController TabbarController];
         //只要登录成功就设置为自动登录
         [[EMClient sharedClient].options setIsAutoLogin:YES];
        
     } failure:^(EMError *aError) {
-        NSLog(@"登录失败");
-        NSLog(@"%@",aError);
+        NSLog(@"%@",aError.code);
         [SVProgressHUD dismiss];
-        [JDStatusBarNotification showWithStatus:@"登录失败" dismissAfter:2 styleName:JDStatusBarStyleDark];
+          NSLog(@"登录失败");
+        [JDStatusBarNotification showWithStatus:@"登录失败" dismissAfter:2 styleName:JDStatusBarStyleError];
     }];
   
 }
 #pragma mark --logup
 -(void)logUpFunction{
-    [SVProgressHUD showWithStatus:@"正在注册..."];
+    
     if (self.userName.text.length*self.pwd.text.length==0) {
         return;
     }
+    [SVProgressHUD showWithStatus:@"正在注册..."];
     [[EMClient sharedClient]asyncRegisterWithUsername:self.userName.text password:self.pwd.text success:^{
         NSLog(@"注册成功");
         [SVProgressHUD dismiss];
-        [JDStatusBarNotification showWithStatus:@"注册成功" dismissAfter:2 styleName:JDStatusBarStyleDark];
+        [JDStatusBarNotification showWithStatus:@"注册成功" dismissAfter:2 styleName:JDStatusBarStyleSuccess];
     } failure:^(EMError *aError) {
         NSLog(@"注册失败");
-        NSLog(@"%@",aError);
+        NSLog(@"%@",aError.code);
         [SVProgressHUD dismiss];
-        [JDStatusBarNotification showWithStatus:@"注册失败" dismissAfter:2 styleName:JDStatusBarStyleDark];
+        [JDStatusBarNotification showWithStatus:@"注册失败" dismissAfter:2 styleName:JDStatusBarStyleWarning];
     }];
 
 }
 
 -(void)save_username_pwd{
-    [[NSUserDefaults standardUserDefaults]setValue:self.userName.text forKey:@"username"];
-    [[NSUserDefaults standardUserDefaults]setValue:self.pwd.text forKey:@"pwd"];
+    NSUserDefaults *ud=[NSUserDefaults standardUserDefaults];
+    [ud setValue:self.userName.text forKey:@"username"];
+    [ud setValue:self.pwd.text forKey:@"pwd"];
+    [ud synchronize];
+        NSLog(@"保存成功");
     
-    NSLog(@"保存成功");
 }
 
 - (IBAction)LogInBtn:(UIButton *)sender {
     [self loginFunctionWith:self.userName.text pwd:self.pwd.text];
-    BOOL lgin =[EMClient sharedClient].options.isAutoLogin;
-    if( lgin){
-         //如果自动登录设置为yes，说明登录成功过了，可以保存用户名和密码为下次登录准备
-        [self save_username_pwd];
-       
-    }
+   [self save_username_pwd];
 }
 - (IBAction)LogUPBtn:(UIButton *)sender {
     [self logUpFunction];
 }
+
+
 -(BOOL)textFieldShouldReturn:(UITextField *)textField{
-   return  [textField resignFirstResponder];
-   
+    if (textField==self.userName) {
+        [self.userName resignFirstResponder];
+        [self.pwd becomeFirstResponder];
+    }else if(textField==self.pwd){
+        [textField resignFirstResponder];
+        [self loginFunctionWith:self.userName.text pwd:self.pwd.text];
+    }
+    return YES;
 }
 -(void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event{
     [self.view endEditing:YES];

@@ -9,7 +9,13 @@
 #import "LRWChartController.h"
 #import "Header.h"
 
-@interface LRWChartController ()
+NSString *const LRWChartTitleNormal =@"微信";
+NSString *const LRWChartTitleWillConnect =@"连接中...";
+NSString *const LRWChartTitleDisConnect =@"未连接";
+NSString *const LRWChartTitleRceiveMsg =@"收取中...";
+
+
+@interface LRWChartController ()<EMClientDelegate>
 
 @end
 
@@ -17,45 +23,38 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    [self changeTileByNetStatus];
-
+    [[EMClient sharedClient] addDelegate:self delegateQueue:nil];
+    
    }
 #pragma mark--监听网络，改变控制器标题
--(void)changeTileByNetStatus{
-    AFNetworkReachabilityManager *netmanger =[AFNetworkReachabilityManager sharedManager];
-    [netmanger startMonitoring];
-    __block NSString *str=@"微信";
-    [netmanger setReachabilityStatusChangeBlock:^(AFNetworkReachabilityStatus status) {
-        switch (status) {
-                //                AFNetworkReachabilityStatusUnknown          = -1,
-                //                AFNetworkReachabilityStatusNotReachable     = 0,
-                //                AFNetworkReachabilityStatusReachableViaWWAN = 1,
-                //                AFNetworkReachabilityStatusReachableViaWiFi = 2,
-            case -1:
-                str =[str stringByAppendingString:@"(未知网络来自地球)"];
-                self.navigationItem.title=str;
-                break;
-            case 0:
-                str =[str stringByAppendingString:@"(无连接)"];
-               self.navigationItem.title=str;
-                break;
-            case 1:
-                str =[str stringByAppendingString:@"(有线网络不怕断)"];
-                self.navigationItem.title=str;
-                break;
-            case 2:
-                str =[str stringByAppendingString:@"(有wifi不用愁)"];
-                self.navigationItem.title=str;
-                break;
-            default:
-                break;
-        }
-    }];
-    
-}
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
+}
+#pragma mark --EMClientDelegate监听标题
+-(void)connectionStateDidChange:(EMConnectionState)aConnectionState{
+    switch (aConnectionState) {
+        case EMConnectionConnected:
+            self.title =LRWChartTitleNormal;
+            break;
+        case EMConnectionDisconnected:
+            self.title =LRWChartTitleDisConnect;
+            break;
+        default:
+            break;
+    }
+}
+-(void)autoLoginDidCompleteWithError:(EMError *)aError{
+    if (!aError) {
+        self.title=LRWChartTitleNormal;
+    }else{
+        self.title=LRWChartTitleDisConnect;
+    }
+}
+
+-(void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    [[EMClient sharedClient]removeDelegate:self];
 }
 
 #pragma mark - Table view data source
